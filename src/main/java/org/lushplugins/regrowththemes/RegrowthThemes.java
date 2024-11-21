@@ -1,9 +1,9 @@
-package org.lushplugins.pluginname;
+package org.lushplugins.regrowththemes;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class PluginName extends JavaPlugin {
-    private static PluginName plugin;
+public final class RegrowthThemes extends JavaPlugin {
+    private static RegrowthThemes plugin;
 
     @Override
     public void onLoad() {
@@ -18,5 +18,9 @@ public final class PluginName extends JavaPlugin {
     @Override
     public void onDisable() {
         // Disable implementation
+    }
+
+    public static RegrowthThemes getInstance() {
+        return plugin;
     }
 }

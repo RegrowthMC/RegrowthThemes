@@ -1,1 +1,1 @@
-rootProject.name = "ProjectName"
+rootProject.name = "RegrowthThemes"
