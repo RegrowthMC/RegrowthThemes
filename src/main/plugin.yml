@@ -1,0 +1,4 @@
+name: PluginName
+version: ${project.version}
+main: org.lushplugins.pluginname.PluginName
+api-version: '1.17'
