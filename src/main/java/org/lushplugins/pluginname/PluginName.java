@@ -20,7 +20,7 @@ public final class PluginName extends JavaPlugin {
         // Disable implementation
     }
     
-    public static PluginName getInstancec() {
+    public static PluginName getInstance() {
         return plugin;
     }
 }
