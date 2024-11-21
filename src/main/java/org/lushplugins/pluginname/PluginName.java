@@ -19,4 +19,8 @@ public final class PluginName extends JavaPlugin {
     public void onDisable() {
         // Disable implementation
     }
+    
+    public static PluginName getInstancec() {
+        return plugin;
+    }
 }
