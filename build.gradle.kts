@@ -2,6 +2,7 @@ plugins {
     `java-library`
     `maven-publish`
     id("io.github.goooler.shadow") version("8.1.7")
+    id("xyz.jpenilla.run-paper") version("2.3.1")
 }
 
 group = "org.lushplugins"
@@ -11,20 +12,26 @@ repositories {
     mavenCentral()
     mavenLocal()
     maven("https://oss.sonatype.org/content/groups/public/")
-    maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/") // Spigot
+    maven("https://repo.papermc.io/repository/maven-public/") // Paper, FastAsyncWorldEdit
+    maven("https://repo.lushplugins.org/snapshots") // LushLib
+    maven("https://maven.enginehub.org/repo/") // FastAsyncWorldEdit
 }
 
 dependencies {
     // Dependencies
-    compileOnly("org.spigotmc:spigot-api:1.21.3-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
 
     // Soft Dependencies
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.12.0")
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.12.0") { isTransitive = false }
 
     // Libraries
+    implementation("org.lushplugins:LushLib:0.10.19")
+    implementation(platform("com.intellectualsites.bom:bom-newest:1.50")) // BOM: FastAsyncWorldEdit
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
     registerFeature("optional") {
         usingSourceSet(sourceSets["main"])
@@ -52,6 +59,14 @@ tasks {
         inputs.property("version", rootProject.version)
         filesMatching("plugin.yml") {
             expand("version" to rootProject.version)
+        }
+    }
+
+    runServer {
+        minecraftVersion("1.21")
+
+        downloadPlugins {
+            modrinth("fastasyncworldedit", "2.12.0")
         }
     }
 }
