@@ -3,7 +3,7 @@ package org.lushplugins.regrowththemes.config;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.jetbrains.annotations.Nullable;
 import org.lushplugins.regrowththemes.RegrowthThemes;
-import org.lushplugins.regrowththemes.schematic.Schematic;
+import org.lushplugins.regrowththemes.schematic.BukkitSchematic;
 import org.lushplugins.regrowththemes.theme.Theme;
 
 import java.io.File;
@@ -23,7 +23,7 @@ public class ConfigManager {
 
         String currentThemeName = config.getString("current-theme", "none");
         if (!currentThemeName.equalsIgnoreCase("none")) {
-            currentTheme = new Theme(Schematic.load(currentThemeName));
+            currentTheme = new Theme(BukkitSchematic.load(currentThemeName));
         } else {
             currentTheme = null;
         }

@@ -15,7 +15,7 @@ public class SchematicUser {
         return currentSchematic;
     }
 
-    public @Nullable Schematic getCurrentSchematic() {
+    public @Nullable BukkitSchematic getCurrentSchematic() {
         if (currentSchematic == null) {
             return null;
         }

@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.lushplugins.lushlib.command.SubCommand;
 import org.lushplugins.lushlib.libraries.chatcolor.ChatColorHandler;
 import org.lushplugins.regrowththemes.RegrowthThemes;
-import org.lushplugins.regrowththemes.schematic.Schematic;
+import org.lushplugins.regrowththemes.schematic.BukkitSchematic;
 import org.lushplugins.regrowththemes.schematic.SchematicManager;
 import org.lushplugins.regrowththemes.utils.FileUtils;
 
@@ -42,7 +42,7 @@ public class CreateCommand extends SubCommand {
         }
 
         SchematicManager schematicManager = RegrowthThemes.getInstance().getSchematicManager();
-        Schematic schematic = Schematic.create(schematicName, player.getLocation());
+        BukkitSchematic schematic = BukkitSchematic.create(schematicName, player.getLocation());
         schematicManager.addSchematic(schematic);
         schematicManager.updateUser(player.getUniqueId(), schematicName);
         return true;

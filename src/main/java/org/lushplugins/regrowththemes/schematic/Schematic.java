@@ -1,14 +1,11 @@
 package org.lushplugins.regrowththemes.schematic;
 
-import com.google.common.collect.HashMultimap;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.extent.clipboard.io.*;
 import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.math.transform.Transform;
 import com.sk89q.worldedit.regions.CuboidRegion;
-import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.world.block.BlockState;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
@@ -25,114 +22,73 @@ import java.util.*;
 import java.util.logging.Level;
 
 public class Schematic {
-    private static final BlockData BUKKIT_AIR = Material.AIR.createBlockData();
-    private static final BlockState AIR = BlockState.get("minecraft:air");
-
     private final File file;
-    private final Clipboard clipboard;
+    private final Region region;
+    private final Map<Vector2i, Map<BlockVector3, BlockState>> chunkMap;
     private final List<UUID> users = new ArrayList<>();
-    private final HashMultimap<Vector2i, org.bukkit.block.BlockState> chunkMap = HashMultimap.create();
 
     protected Schematic(File file, Clipboard clipboard) {
         this.file = file;
-        this.clipboard = clipboard;
+        this.region = new Region(clipboard);
+        this.chunkMap = generateChunkMap(clipboard);
+    }
 
-        World world = Bukkit.getWorld("world");
-        Bukkit.getScheduler().runTaskAsynchronously(RegrowthThemes.getInstance(), () -> {
-            for (BlockVector3 position : clipboard) {
-                BlockData blockData = BukkitAdapter.adapt(clipboard.getBlock(position));
-                if (blockData.getMaterial().isAir()) {
-                    continue;
-                }
-
-                Location location = new Location(world, position.x(), position.y(), position.z());
-                Chunk chunk = location.getChunk();
-                org.bukkit.block.BlockState state = blockData.createBlockState().copy(location);
-
-                chunkMap.put(new Vector2i(chunk.getX(), chunk.getZ()), state);
-            }
-        });
+    protected Schematic(File file, Region region) {
+        this.file = file;
+        this.region = region;
+        this.chunkMap = new HashMap<>();
     }
 
     public String getName() {
         return file.getName();
     }
 
-    public void placeBlock(org.bukkit.block.BlockState state) {
-        BlockData blockData = state.getBlockData();
-        BlockVector3 position = BlockVector3.at(state.getX(), state.getY(), state.getZ());
+    public void placeBlock(BlockVector3 position, BlockState state) {
+        region.expandToFit(position);
 
-        Region region = clipboard.getRegion();
-        if (!region.contains(position)) {
-            BlockVector3 expansion = BlockVector3.at(
-                Math.max(0, region.getMinimumPoint().x() - position.x()) + Math.max(0, position.x() - region.getMaximumPoint().x()),
-                0,
-                Math.max(0, region.getMinimumPoint().z() - position.z()) + Math.max(0, position.z() - region.getMaximumPoint().z())
-            );
-
-            region.expand(expansion);
-            // TODO: Work out how to actually expand the region - Clipboard#getRegion returns a copy of the region
-        }
-
-        clipboard.setBlock(
-            state.getX(),
-            state.getY(),
-            state.getZ(),
-            BukkitAdapter.adapt(blockData));
-
-        Chunk chunk = state.getChunk();
-        chunkMap.put(new Vector2i(chunk.getX(), chunk.getZ()), state);
-
-        Location location = state.getLocation();
-        Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
-            users.stream()
-                .map(Bukkit::getPlayer)
-                .filter(Objects::nonNull)
-                .forEach(player -> player.sendBlockChange(location, blockData));
-        }, 5);
+        Vector2i chunk = new Vector2i(position.x() / 16, position.z() / 16);
+        Map<BlockVector3, BlockState> states = chunkMap.computeIfAbsent(chunk, (i) -> new HashMap<>());
+        states.put(position, state);
     }
 
-    public void breakBlock(Location location) {
-        BlockVector3 position = BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ());
-        Region region = clipboard.getRegion();
+    public void breakBlock(BlockVector3 position) {
         if (!region.contains(position)) {
             return;
         }
 
-        clipboard.setBlock(
-            location.getBlockX(),
-            location.getBlockY(),
-            location.getBlockZ(),
-            AIR);
+        Vector2i chunk = new Vector2i(position.x() / 16, position.z() / 16);
+        Map<BlockVector3, BlockState> states = chunkMap.get(chunk);
+        if (states == null) {
+            return;
+        }
 
-        Chunk chunk = location.getChunk();
-        Vector2i chunkCoord = new Vector2i(chunk.getX(), chunk.getZ());
-        chunkMap.get(chunkCoord).stream()
-            .filter(state -> state.getLocation() == location)
-            .findFirst()
-            .ifPresent(state -> chunkMap.remove(chunkCoord, state));
-
-        Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
-            users.stream()
-                .map(Bukkit::getPlayer)
-                .filter(Objects::nonNull)
-                .forEach(player -> player.sendBlockChange(location, BUKKIT_AIR));
-        }, 5);
+        states.remove(position);
     }
 
-    public void sendPackets(Player player, Chunk chunk) {
-        Vector2i chunkCoordinate = new Vector2i(chunk.getX(), chunk.getZ());
-        if (!chunkMap.containsKey(chunkCoordinate)) {
+    public void sendPackets(Player player, Vector2i chunk) {
+        if (!chunkMap.containsKey(chunk)) {
             return;
         }
 
         Bukkit.getScheduler().runTaskAsynchronously(RegrowthThemes.getInstance(), () -> {
             // TODO: Run different method based on number of block states
-            player.sendBlockChanges(chunkMap.get(chunkCoordinate));
+            List<org.bukkit.block.BlockState> states = chunkMap.get(chunk).entrySet().stream()
+                .map(entry -> {
+                    BlockData blockData = BukkitAdapter.adapt(entry.getValue());
+                    BlockVector3 position = entry.getKey();
+                    Location location = new Location(null, position.x(), position.y(), position.z());
+                    return blockData.createBlockState().copy(location);
+                })
+                .toList();
+
+            player.sendBlockChanges(states);
         });
     }
 
     public void save() {
+        BlockArrayClipboard clipboard = region.asClipboard();
+        chunkMap.values().forEach(states -> states.forEach(clipboard::setBlock));
+
         try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_V3_SCHEMATIC.getWriter(new FileOutputStream(file))) {
             writer.write(clipboard);
         } catch (IOException e) {
@@ -167,13 +123,8 @@ public class Schematic {
         }
 
         File file = FileUtils.getSafeFile(new File(RegrowthThemes.getInstance().getDataFolder(), "schematics"), path);
-        CuboidRegion region = new CuboidRegion(
-            BlockVector3.at(location.getBlockX() - 150, location.getWorld().getMaxHeight(), location.getBlockZ() - 150),
-            BlockVector3.at(location.getBlockX() + 150, location.getWorld().getMinHeight(), location.getBlockZ() + 150));
-        BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
-        clipboard.setOrigin(BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
-
-        return new Schematic(file, clipboard);
+        BlockVector3 origin = BukkitAdapter.asBlockVector(location);
+        return new Schematic(file, new Region(origin));
     }
 
     public static Schematic load(String path) {
@@ -191,9 +142,78 @@ public class Schematic {
         }
 
         try (ClipboardReader reader = format.getReader(new FileInputStream(file))) {
-            return new Schematic(file, reader.read());
+            Clipboard clipboard = reader.read();
+            return new Schematic(file, clipboard);
         } catch (IOException e) {
             return null;
+        }
+    }
+
+    protected static Map<Vector2i, Map<BlockVector3, BlockState>> generateChunkMap(Clipboard clipboard) {
+        Map<Vector2i, Map<BlockVector3, BlockState>> chunkMap = new HashMap<>();
+        for (BlockVector3 position : clipboard) {
+            BlockState state = clipboard.getBlock(position);
+            if (state.isAir()) {
+                continue;
+            }
+
+            Vector2i chunk = new Vector2i(position.x() / 16, position.z() / 16);
+            Map<BlockVector3, BlockState> states = chunkMap.computeIfAbsent(chunk, (i) -> new HashMap<>());
+            states.put(position, state);
+        }
+
+        return chunkMap;
+    }
+
+    protected static class Region {
+        private final BlockVector3 origin;
+        private BlockVector3 minPoint;
+        private BlockVector3 maxPoint;
+
+        public Region(Clipboard clipboard) {
+            this.origin = clipboard.getOrigin();
+            this.minPoint = clipboard.getMinimumPoint();
+            this.maxPoint = clipboard.getMaximumPoint();
+        }
+
+        public Region(BlockVector3 origin) {
+            this.origin = origin;
+            this.minPoint = origin.subtract(1, 1, 1);
+            this.maxPoint = origin.add(1, 1, 1);
+        }
+
+        public BlockVector3 getOrigin() {
+            return origin;
+        }
+
+        public BlockVector3 getMinPoint() {
+            return minPoint;
+        }
+
+        public BlockVector3 getMaxPoint() {
+            return maxPoint;
+        }
+
+        public boolean contains(BlockVector3 position) {
+            return position.containedWithin(minPoint, maxPoint);
+        }
+
+        public void expandToFit(BlockVector3 position) {
+            if (!position.containedWithin(minPoint, maxPoint)) {
+                minPoint = position.getMinimum(minPoint);
+                maxPoint = position.getMaximum(maxPoint);
+            }
+        }
+
+        public CuboidRegion asCuboidRegion() {
+            return new CuboidRegion(minPoint, maxPoint);
+        }
+
+        public BlockArrayClipboard asClipboard() {
+            CuboidRegion region = asCuboidRegion();
+            BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
+            clipboard.setOrigin(origin);
+            return clipboard;
         }
     }
 }

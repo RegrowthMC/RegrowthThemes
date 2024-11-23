@@ -9,7 +9,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.Nullable;
 import org.lushplugins.regrowththemes.RegrowthThemes;
-import org.lushplugins.regrowththemes.schematic.Schematic;
+import org.lushplugins.regrowththemes.schematic.BukkitSchematic;
 import org.lushplugins.regrowththemes.schematic.SchematicManager;
 import org.lushplugins.regrowththemes.schematic.SchematicUser;
 
@@ -18,7 +18,7 @@ public class EditorListener implements Listener {
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        Schematic schematic = getCurrentSchematic(player);
+        BukkitSchematic schematic = getCurrentSchematic(player);
         if (schematic == null) {
             return;
         }
@@ -31,7 +31,7 @@ public class EditorListener implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        Schematic schematic = getCurrentSchematic(player);
+        BukkitSchematic schematic = getCurrentSchematic(player);
         if (schematic == null) {
             return;
         }
@@ -46,7 +46,7 @@ public class EditorListener implements Listener {
         RegrowthThemes.getInstance().getSchematicManager().removeUser(player.getUniqueId());
     }
 
-    private @Nullable Schematic getCurrentSchematic(Player player) {
+    private @Nullable BukkitSchematic getCurrentSchematic(Player player) {
         SchematicManager schematicManager = RegrowthThemes.getInstance().getSchematicManager();
         SchematicUser user = schematicManager.getUser(player.getUniqueId());
         if (user == null) {
