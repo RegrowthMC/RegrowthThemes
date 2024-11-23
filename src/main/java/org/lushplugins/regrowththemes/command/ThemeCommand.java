@@ -6,6 +6,7 @@ import org.lushplugins.lushlib.command.Command;
 import org.lushplugins.regrowththemes.command.subcommands.CreateCommand;
 import org.lushplugins.regrowththemes.command.subcommands.EditCommand;
 import org.lushplugins.regrowththemes.command.subcommands.ReloadCommand;
+import org.lushplugins.regrowththemes.command.subcommands.ViewCommand;
 
 public class ThemeCommand extends Command {
 
@@ -14,6 +15,7 @@ public class ThemeCommand extends Command {
         addSubCommand(new CreateCommand());
         addSubCommand(new EditCommand());
         addSubCommand(new ReloadCommand());
+        addSubCommand(new ViewCommand());
     }
 
     @Override
