@@ -60,19 +60,6 @@ public class Schematic {
 
     public void placeBlock(org.bukkit.block.BlockState state) {
         BlockData blockData = state.getBlockData();
-        BlockVector3 position = BlockVector3.at(state.getX(), state.getY(), state.getZ());
-
-        Region region = clipboard.getRegion();
-        if (!region.contains(position)) {
-            BlockVector3 expansion = BlockVector3.at(
-                Math.max(0, region.getMinimumPoint().x() - position.x()) + Math.max(0, position.x() - region.getMaximumPoint().x()),
-                0,
-                Math.max(0, region.getMinimumPoint().z() - position.z()) + Math.max(0, position.z() - region.getMaximumPoint().z())
-            );
-
-            region.expand(expansion);
-            // TODO: Work out how to actually expand the region - Clipboard#getRegion returns a copy of the region
-        }
 
         clipboard.setBlock(
             state.getX(),
