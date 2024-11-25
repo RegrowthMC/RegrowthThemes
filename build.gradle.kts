@@ -22,7 +22,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
 
     // Soft Dependencies
-    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.12.0")
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.12.2")
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.12.0") { isTransitive = false }
 
     // Libraries
