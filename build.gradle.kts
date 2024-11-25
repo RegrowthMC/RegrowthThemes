@@ -27,7 +27,7 @@ dependencies {
 
     // Libraries
     implementation("org.lushplugins:LushLib:0.10.19")
-    implementation(platform("com.intellectualsites.bom:bom-newest:1.50")) // BOM: FastAsyncWorldEdit
+    implementation(platform("com.intellectualsites.bom:bom-newest:1.51")) // BOM: FastAsyncWorldEdit
 }
 
 java {
