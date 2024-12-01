@@ -1,18 +1,27 @@
 package org.lushplugins.regrowththemes.schematic;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
+import com.github.retrooper.packetevents.util.Vector3i;
 import com.google.common.collect.HashMultimap;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.extent.clipboard.io.*;
 import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.math.transform.Transform;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.util.concurrency.LazyReference;
+import com.sk89q.worldedit.world.block.BaseBlock;
 import com.sk89q.worldedit.world.block.BlockState;
 import org.bukkit.*;
+import org.bukkit.block.Skull;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
+import org.enginehub.linbus.tree.LinCompoundTag;
+import org.enginehub.linbus.tree.LinListTag;
+import org.enginehub.linbus.tree.LinStringTag;
+import org.enginehub.linbus.tree.LinTagType;
 import org.joml.Vector2i;
 import org.lushplugins.regrowththemes.RegrowthThemes;
 import org.lushplugins.regrowththemes.utils.FileUtils;
@@ -32,6 +41,7 @@ public class Schematic {
     private final Clipboard clipboard;
     private final List<UUID> users = new ArrayList<>();
     private final HashMultimap<Vector2i, org.bukkit.block.BlockState> chunkMap = HashMultimap.create();
+    private final HashMultimap<Vector2i, Long> locationMap = HashMultimap.create();
 
     protected Schematic(File file, Clipboard clipboard) {
         this.file = file;
@@ -41,6 +51,8 @@ public class Schematic {
         Bukkit.getScheduler().runTaskAsynchronously(RegrowthThemes.getInstance(), () -> {
             for (BlockVector3 position : clipboard) {
                 BlockData blockData = BukkitAdapter.adapt(clipboard.getBlock(position));
+                BaseBlock temp = clipboard.getBlock(position).toBaseBlock();
+
                 if (blockData.getMaterial().isAir()) {
                     continue;
                 }
@@ -49,7 +61,9 @@ public class Schematic {
                 Chunk chunk = location.getChunk();
                 org.bukkit.block.BlockState state = blockData.createBlockState().copy(location);
 
-                chunkMap.put(new Vector2i(chunk.getX(), chunk.getZ()), state);
+                Vector2i chunkLocation = new Vector2i(chunk.getX(), chunk.getZ());
+                chunkMap.put(chunkLocation, state);
+                locationMap.put(chunkLocation, new Vector3i(position.x(), position.y(), position.z()).getSerializedPosition());
             }
         });
     }
@@ -58,17 +72,50 @@ public class Schematic {
         return file.getName();
     }
 
+    public boolean containsPosition(long position) {
+        return locationMap.containsValue(position);
+    }
+
     public void placeBlock(org.bukkit.block.BlockState state) {
         BlockData blockData = state.getBlockData();
+        BlockState blockState = BukkitAdapter.adapt(blockData);
 
+        LazyReference<LinCompoundTag> nbtData = null;
+        if (state instanceof Skull skull) {
+            PlayerProfile playerProfile = skull.getPlayerProfile();
+            if (playerProfile != null) {
+                ProfileProperty property = playerProfile.getProperties().stream().findFirst().orElse(null);
+                if (property != null) {
+                    LinCompoundTag.Builder propertyTagBuilder = LinCompoundTag.builder()
+                        .put("name", LinStringTag.of(property.getName()))
+                        .put("value", LinStringTag.of(property.getValue()));
+
+                    if (property.getSignature() != null) {
+                        propertyTagBuilder.put("signature", LinStringTag.of(property.getSignature()));
+                    }
+
+                    nbtData = LazyReference.from(() -> LinCompoundTag.builder()
+                        .put("profile", LinCompoundTag.builder()
+                            .put("properties", LinListTag.builder(LinTagType.compoundTag())
+                                .add(propertyTagBuilder.build())
+                                .build())
+                            .build())
+                        .build());
+                }
+            }
+        }
+
+        BaseBlock builtState = blockState.toBaseBlock(nbtData);
         clipboard.setBlock(
             state.getX(),
             state.getY(),
             state.getZ(),
-            BukkitAdapter.adapt(blockData));
+            builtState);
 
         Chunk chunk = state.getChunk();
-        chunkMap.put(new Vector2i(chunk.getX(), chunk.getZ()), state);
+        Vector2i chunkLocation = new Vector2i(chunk.getX(), chunk.getZ());
+        chunkMap.put(chunkLocation, state);
+        locationMap.put(chunkLocation, new Vector3i(state.getX(), state.getY(), state.getZ()).getSerializedPosition());
 
         Location location = state.getLocation();
         Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
@@ -98,6 +145,8 @@ public class Schematic {
             .filter(state -> state.getLocation() == location)
             .findFirst()
             .ifPresent(state -> chunkMap.remove(chunkCoord, state));
+
+        locationMap.get(chunkCoord).remove(new Vector3i(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
 
         Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
             users.stream()

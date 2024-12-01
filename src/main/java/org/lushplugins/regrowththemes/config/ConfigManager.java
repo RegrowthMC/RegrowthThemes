@@ -30,7 +30,7 @@ public class ConfigManager {
     }
 
     public boolean isCurrentTheme(String themeName) {
-        return currentTheme.getName().equalsIgnoreCase(themeName);
+        return currentTheme.name().equalsIgnoreCase(themeName);
     }
 
     public @Nullable Theme getCurrentTheme() {

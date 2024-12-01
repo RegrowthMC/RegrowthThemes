@@ -1,10 +1,7 @@
 package org.lushplugins.regrowththemes.schematic;
 
 import org.jetbrains.annotations.Nullable;
-import org.lushplugins.regrowththemes.RegrowthThemes;
-import org.lushplugins.regrowththemes.utils.FileUtils;
 
-import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.UUID;

@@ -4,7 +4,7 @@ import org.lushplugins.regrowththemes.schematic.Schematic;
 
 public record Theme(Schematic schematic) {
 
-    public String getName() {
+    public String name() {
         return schematic.getName();
     }
 }

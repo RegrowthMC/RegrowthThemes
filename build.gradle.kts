@@ -6,13 +6,14 @@ plugins {
 }
 
 group = "org.lushplugins"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
     mavenLocal()
     maven("https://oss.sonatype.org/content/groups/public/")
     maven("https://repo.papermc.io/repository/maven-public/") // Paper, FastAsyncWorldEdit
+    maven("https://repo.codemc.io/repository/maven-releases/") // PacketEvents
     maven("https://repo.lushplugins.org/snapshots") // LushLib
     maven("https://maven.enginehub.org/repo/") // FastAsyncWorldEdit
 }
@@ -20,6 +21,7 @@ repositories {
 dependencies {
     // Dependencies
     compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.6.0")
 
     // Soft Dependencies
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.12.0")
@@ -67,6 +69,7 @@ tasks {
 
         downloadPlugins {
             modrinth("fastasyncworldedit", "2.12.0")
+            modrinth("packetevents", "QLgJReg5")
         }
     }
 }

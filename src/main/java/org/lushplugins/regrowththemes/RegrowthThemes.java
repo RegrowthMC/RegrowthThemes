@@ -1,5 +1,6 @@
 package org.lushplugins.regrowththemes;
 
+import com.github.retrooper.packetevents.PacketEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.lushplugins.lushlib.libraries.chatcolor.ChatColorHandler;
@@ -7,6 +8,7 @@ import org.lushplugins.lushlib.plugin.SpigotPlugin;
 import org.lushplugins.regrowththemes.command.ThemeCommand;
 import org.lushplugins.regrowththemes.config.ConfigManager;
 import org.lushplugins.regrowththemes.listener.EditorListener;
+import org.lushplugins.regrowththemes.listener.PacketListener;
 import org.lushplugins.regrowththemes.listener.ViewerListener;
 import org.lushplugins.regrowththemes.schematic.SchematicManager;
 
@@ -32,6 +34,8 @@ public final class RegrowthThemes extends SpigotPlugin {
         registerListeners(
             new EditorListener(),
             new ViewerListener());
+
+        PacketEvents.getAPI().getEventManager().registerListener(new PacketListener());
 
         registerCommand(new ThemeCommand());
 
