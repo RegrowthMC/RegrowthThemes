@@ -18,10 +18,7 @@ import org.bukkit.*;
 import org.bukkit.block.Skull;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
-import org.enginehub.linbus.tree.LinCompoundTag;
-import org.enginehub.linbus.tree.LinListTag;
-import org.enginehub.linbus.tree.LinStringTag;
-import org.enginehub.linbus.tree.LinTagType;
+import org.enginehub.linbus.tree.*;
 import org.joml.Vector2i;
 import org.lushplugins.regrowththemes.RegrowthThemes;
 import org.lushplugins.regrowththemes.utils.FileUtils;
@@ -95,6 +92,10 @@ public class Schematic {
                     }
 
                     nbtData = LazyReference.from(() -> LinCompoundTag.builder()
+                        .put("id", LinStringTag.of("minecraft:skull"))
+                        .put("x", LinIntTag.of(skull.getX()))
+                        .put("y", LinIntTag.of(skull.getY()))
+                        .put("z", LinIntTag.of(skull.getZ()))
                         .put("profile", LinCompoundTag.builder()
                             .put("properties", LinListTag.builder(LinTagType.compoundTag())
                                 .add(propertyTagBuilder.build())
