@@ -93,9 +93,9 @@ public class Schematic {
 
                     nbtData = LazyReference.from(() -> LinCompoundTag.builder()
                         .put("id", LinStringTag.of("minecraft:skull"))
-                        .put("x", LinIntTag.of(skull.getX()))
-                        .put("y", LinIntTag.of(skull.getY()))
-                        .put("z", LinIntTag.of(skull.getZ()))
+                        .put("x", LinIntTag.of(skull.getX() - clipboard.getMinimumPoint().x()))
+                        .put("y", LinIntTag.of(skull.getY() - clipboard.getMinimumPoint().y()))
+                        .put("z", LinIntTag.of(skull.getZ() - clipboard.getMinimumPoint().z()))
                         .put("profile", LinCompoundTag.builder()
                             .put("properties", LinListTag.builder(LinTagType.compoundTag())
                                 .add(propertyTagBuilder.build())
