@@ -47,17 +47,17 @@ public class Schematic {
         World world = Bukkit.getWorld("world");
         Bukkit.getScheduler().runTaskAsynchronously(RegrowthThemes.getInstance(), () -> {
             for (BlockVector3 position : clipboard) {
-                BlockData blockData = BukkitAdapter.adapt(clipboard.getBlock(position));
-                BlockState tempstate = clipboard.getBlock(position);
-                BaseBlock temp = clipboard.getBlock(position).toBaseBlock();
+                BlockData bukkitBlockData = BukkitAdapter.adapt(clipboard.getFullBlock(position));
+                BaseBlock blockData = clipboard.getFullBlock(position);
 
-                if (blockData.getMaterial().isAir()) {
+                if (bukkitBlockData.getMaterial().isAir()) {
                     continue;
                 }
 
+                // TODO: convert temp to PE compatible blockstate (idk?)
                 Location location = new Location(world, position.x(), position.y(), position.z());
                 Chunk chunk = location.getChunk();
-                org.bukkit.block.BlockState state = blockData.createBlockState().copy(location);
+                org.bukkit.block.BlockState state = bukkitBlockData.createBlockState().copy(location);
 
                 Vector2i chunkLocation = new Vector2i(chunk.getX(), chunk.getZ());
                 chunkMap.put(chunkLocation, state);
