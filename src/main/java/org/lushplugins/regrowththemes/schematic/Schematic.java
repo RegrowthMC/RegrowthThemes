@@ -48,6 +48,7 @@ public class Schematic {
         Bukkit.getScheduler().runTaskAsynchronously(RegrowthThemes.getInstance(), () -> {
             for (BlockVector3 position : clipboard) {
                 BlockData blockData = BukkitAdapter.adapt(clipboard.getBlock(position));
+                BlockState tempstate = clipboard.getBlock(position);
                 BaseBlock temp = clipboard.getBlock(position).toBaseBlock();
 
                 if (blockData.getMaterial().isAir()) {
