@@ -2,7 +2,13 @@ package org.lushplugins.regrowththemes.schematic;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.nbt.NBTCompound;
+import com.github.retrooper.packetevents.protocol.world.blockentity.BlockEntityTypes;
+import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import com.github.retrooper.packetevents.util.Vector3i;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockEntityData;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
 import com.google.common.collect.HashMultimap;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
@@ -22,6 +28,7 @@ import org.enginehub.linbus.tree.*;
 import org.joml.Vector2i;
 import org.lushplugins.regrowththemes.RegrowthThemes;
 import org.lushplugins.regrowththemes.utils.FileUtils;
+import org.lushplugins.regrowththemes.utils.NBTAdapter;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,34 +41,46 @@ public class Schematic {
     private static final BlockData BUKKIT_AIR = Material.AIR.createBlockData();
     private static final BlockState AIR = BlockState.get("minecraft:air");
 
+    // TODO: Move file, clipboard and potentially users to separate modifiable schematic
     private final File file;
     private final Clipboard clipboard;
     private final List<UUID> users = new ArrayList<>();
-    private final HashMultimap<Vector2i, org.bukkit.block.BlockState> chunkMap = HashMultimap.create();
     private final HashMultimap<Vector2i, Long> locationMap = HashMultimap.create();
+    private final HashMap<Long, SchematicBlock> blockMap = new HashMap<>();
 
     protected Schematic(File file, Clipboard clipboard) {
         this.file = file;
         this.clipboard = clipboard;
 
-        World world = Bukkit.getWorld("world");
         Bukkit.getScheduler().runTaskAsynchronously(RegrowthThemes.getInstance(), () -> {
             for (BlockVector3 position : clipboard) {
-                BlockData bukkitBlockData = BukkitAdapter.adapt(clipboard.getFullBlock(position));
                 BaseBlock blockData = clipboard.getFullBlock(position);
 
-                if (bukkitBlockData.getMaterial().isAir()) {
+                if (blockData.getMaterial().isAir()) {
                     continue;
                 }
 
-                // TODO: convert temp to PE compatible blockstate (idk?)
-                Location location = new Location(world, position.x(), position.y(), position.z());
-                Chunk chunk = location.getChunk();
-                org.bukkit.block.BlockState state = bukkitBlockData.createBlockState().copy(location);
+                SchematicBlock.TileEntityData blockEntityData = null;
+                LinCompoundTag tag = blockData.getNbt();
+                if (tag != null) {
+                    blockEntityData = new SchematicBlock.TileEntityData(
+                        BlockEntityTypes.getByName(blockData.getNbtId()),
+                        (NBTCompound) NBTAdapter.adapt(tag)
+                    );
+                }
 
-                Vector2i chunkLocation = new Vector2i(chunk.getX(), chunk.getZ());
-                chunkMap.put(chunkLocation, state);
-                locationMap.put(chunkLocation, new Vector3i(position.x(), position.y(), position.z()).getSerializedPosition());
+                Vector2i chunkLocation = new Vector2i(position.x() >> 4, position.z() >> 4);
+                Vector3i location = new Vector3i(position.x(), position.y(), position.z());
+                long serializedPosition = location.getSerializedPosition();
+
+                SchematicBlock schemBlock = new SchematicBlock(
+                    serializedPosition,
+                    WrappedBlockState.getByString(blockData.getAsString()).getGlobalId(),
+                    blockEntityData
+                );
+
+                locationMap.put(chunkLocation, serializedPosition);
+                blockMap.put(serializedPosition, schemBlock);
             }
         });
     }
@@ -114,10 +133,10 @@ public class Schematic {
             state.getZ(),
             builtState);
 
-        Chunk chunk = state.getChunk();
-        Vector2i chunkLocation = new Vector2i(chunk.getX(), chunk.getZ());
-        chunkMap.put(chunkLocation, state);
-        locationMap.put(chunkLocation, new Vector3i(state.getX(), state.getY(), state.getZ()).getSerializedPosition());
+//        Chunk chunk = state.getChunk();
+//        Vector2i chunkLocation = new Vector2i(chunk.getX(), chunk.getZ());
+//        chunkMap.put(chunkLocation, state);
+//        locationMap.put(chunkLocation, new Vector3i(state.getX(), state.getY(), state.getZ()).getSerializedPosition());
 
         Location location = state.getLocation();
         Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
@@ -129,9 +148,9 @@ public class Schematic {
     }
 
     public void breakBlock(Location location) {
-        BlockVector3 position = BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        BlockVector3 wePosition = BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ());
         Region region = clipboard.getRegion();
-        if (!region.contains(position)) {
+        if (!region.contains(wePosition)) {
             return;
         }
 
@@ -143,12 +162,11 @@ public class Schematic {
 
         Chunk chunk = location.getChunk();
         Vector2i chunkCoord = new Vector2i(chunk.getX(), chunk.getZ());
-        chunkMap.get(chunkCoord).stream()
-            .filter(state -> state.getLocation() == location)
-            .findFirst()
-            .ifPresent(state -> chunkMap.remove(chunkCoord, state));
 
-        locationMap.get(chunkCoord).remove(new Vector3i(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+
+        long serializedPosition = new Vector3i(location.getBlockX(), location.getBlockY(), location.getBlockZ()).getSerializedPosition();
+        locationMap.get(chunkCoord).remove(serializedPosition);
+        blockMap.remove(serializedPosition);
 
         Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
             users.stream()
@@ -159,14 +177,38 @@ public class Schematic {
     }
 
     public void sendPackets(Player player, Chunk chunk) {
-        Vector2i chunkCoordinate = new Vector2i(chunk.getX(), chunk.getZ());
-        if (!chunkMap.containsKey(chunkCoordinate)) {
+        Vector2i chunkLocation = new Vector2i(chunk.getX(), chunk.getZ());
+        if (!locationMap.containsKey(chunkLocation)) {
             return;
         }
 
         Bukkit.getScheduler().runTaskAsynchronously(RegrowthThemes.getInstance(), () -> {
-            // TODO: Run different method based on number of block states
-            player.sendBlockChanges(chunkMap.get(chunkCoordinate));
+            HashMultimap<Vector3i, WrapperPlayServerMultiBlockChange.EncodedBlock> encodedBlocks = HashMultimap.create();
+            List<WrapperPlayServerBlockEntityData> entityDataPackets = new ArrayList<>();
+
+            locationMap.get(chunkLocation).stream()
+                .map(blockMap::get)
+                .forEach(schemBlock -> {
+                    Vector3i position = schemBlock.getPosition();
+                    Vector3i chunkPosition = new Vector3i(position.getX() >> 4, position.getY() >> 4, position.getZ() >> 4);
+                    encodedBlocks.put(chunkPosition, schemBlock.getEncodedBlock());
+
+                    schemBlock.prepareNBTPacket().ifPresent(entityDataPackets::add);
+                });
+
+            for (Vector3i chunkPosition : encodedBlocks.keySet()) {
+                WrapperPlayServerMultiBlockChange packet = new WrapperPlayServerMultiBlockChange(
+                    chunkPosition,
+                    null,
+                    encodedBlocks.get(chunkPosition).toArray(WrapperPlayServerMultiBlockChange.EncodedBlock[]::new)
+                );
+
+                PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
+            }
+
+            for (WrapperPlayServerBlockEntityData packet : entityDataPackets) {
+                PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
+            }
         });
     }
 
