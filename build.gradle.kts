@@ -24,7 +24,7 @@ dependencies {
     compileOnly("com.github.retrooper:packetevents-spigot:2.6.0")
 
     // Soft Dependencies
-    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.12.0")
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.12.3")
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.12.0") { isTransitive = false }
 
     // Libraries
