@@ -28,7 +28,7 @@ dependencies {
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.12.0") { isTransitive = false }
 
     // Libraries
-    implementation("org.lushplugins:LushLib:0.10.19")
+    implementation("org.lushplugins:LushLib:0.10.34")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.50")) // BOM: FastAsyncWorldEdit
 }
 
