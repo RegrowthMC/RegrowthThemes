@@ -1,8 +1,8 @@
 plugins {
     `java-library`
     `maven-publish`
-    id("io.github.goooler.shadow") version("8.1.7")
-    id("xyz.jpenilla.run-paper") version("2.3.1")
+    id("com.gradleup.shadow") version("9.3.1")
+    id("xyz.jpenilla.run-paper") version("3.0.2")
 }
 
 group = "org.lushplugins"
@@ -14,13 +14,14 @@ repositories {
     maven("https://oss.sonatype.org/content/groups/public/")
     maven("https://repo.papermc.io/repository/maven-public/") // Paper, FastAsyncWorldEdit
     maven("https://repo.codemc.io/repository/maven-releases/") // PacketEvents
+    maven("https://repo.jsinco.dev/releases/") // BiomeAPI
     maven("https://repo.lushplugins.org/snapshots") // LushLib
     maven("https://maven.enginehub.org/repo/") // FastAsyncWorldEdit
 }
 
 dependencies {
     // Dependencies
-    compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:26.1.2.build.69-stable")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.2")
 
     // Soft Dependencies
@@ -29,11 +30,12 @@ dependencies {
 
     // Libraries
     implementation("org.lushplugins:LushLib:0.10.35")
+    implementation("me.outspending.biomesapi:BiomesAPI:2.3.0-c7b2122")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56")) // BOM: FastAsyncWorldEdit
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 
     registerFeature("optional") {
         usingSourceSet(sourceSets["main"])
@@ -65,11 +67,11 @@ tasks {
     }
 
     runServer {
-        minecraftVersion("1.21")
+        minecraftVersion("26.1.2")
 
         downloadPlugins {
-            modrinth("fastasyncworldedit", "2.12.0")
-            modrinth("packetevents", "QLgJReg5")
+            modrinth("fastasyncworldedit", "2.15.2")
+            modrinth("packetevents", "2.12.2+spigot")
         }
     }
 }
