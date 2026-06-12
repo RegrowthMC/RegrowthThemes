@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -265,6 +266,10 @@ public class Schematic {
     }
 
     public static Schematic load(File file) {
+        if (!file.exists()) {
+            return null;
+        }
+
         ClipboardFormat format = ClipboardFormats.findByFile(file);
         if (format == null) {
             return null;

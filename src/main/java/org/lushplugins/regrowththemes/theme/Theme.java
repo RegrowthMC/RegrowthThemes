@@ -1,10 +1,6 @@
 package org.lushplugins.regrowththemes.theme;
 
+import org.jetbrains.annotations.Nullable;
 import org.lushplugins.regrowththemes.schematic.Schematic;
 
-public record Theme(Schematic schematic) {
-
-    public String name() {
-        return schematic.getName();
-    }
-}
+public record Theme(String name, @Nullable Schematic schematic) {}

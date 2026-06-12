@@ -49,7 +49,7 @@ public class ConfigManager {
                 }
             }
 
-            currentTheme = new Theme(Schematic.load(currentThemeName));
+            currentTheme = new Theme(currentThemeName, Schematic.load(currentThemeName));
         } else {
             currentTheme = null;
         }
