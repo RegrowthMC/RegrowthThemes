@@ -24,8 +24,8 @@ dependencies {
     compileOnly("com.github.retrooper:packetevents-spigot:2.6.0")
 
     // Soft Dependencies
-    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.12.0")
-    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.12.0") { isTransitive = false }
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.15.2")
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.15.2") { isTransitive = false }
 
     // Libraries
     implementation("org.lushplugins:LushLib:0.10.35")
