@@ -21,7 +21,7 @@ repositories {
 dependencies {
     // Dependencies
     compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
-    compileOnly("com.github.retrooper:packetevents-spigot:2.6.0")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.12.2")
 
     // Soft Dependencies
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.15.2")
