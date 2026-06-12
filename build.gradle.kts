@@ -30,7 +30,7 @@ dependencies {
 
     // Libraries
     implementation("org.lushplugins:LushLib:0.10.35")
-    implementation("me.outspending.biomesapi:BiomesAPI:2.3.0-c7b2122")
+    implementation("me.outspending.biomesapi:BiomesAPI:2.3.0-06fa631")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56")) // BOM: FastAsyncWorldEdit
 }
 
@@ -50,8 +50,6 @@ tasks {
     }
 
     shadowJar {
-        minimize()
-
         archiveFileName.set("${project.name}-${project.version}.jar")
     }
 

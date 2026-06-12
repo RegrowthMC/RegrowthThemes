@@ -1,5 +1,8 @@
 package org.lushplugins.regrowththemes.config;
 
+import me.outspending.biomesapi.keys.ResourceKey;
+import me.outspending.biomesapi.renderer.packet.PacketHandler;
+import me.outspending.biomesapi.renderer.packet.data.PhonyCustomBiome;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.Nullable;
@@ -23,6 +26,9 @@ public class ConfigManager {
         plugin.reloadConfig();
         FileConfiguration config = plugin.getConfig();
 
+        PacketHandler biomePacketHandler = PacketHandler.of(plugin);
+        biomePacketHandler.clearBiomes();
+
         String currentThemeName = config.getString("current-theme", "none");
         if (!currentThemeName.equalsIgnoreCase("none")) {
             File themeFile = RegrowthThemes.getInstance().getDataPath()
@@ -34,14 +40,13 @@ public class ConfigManager {
                 FileConfiguration themeConfig = YamlConfiguration.loadConfiguration(themeFile);
                 String biome = themeConfig.getString("biome");
 
-//                if (biome != null) {
-//                    // TODO: Implement packet based biome displaying
-//                    AbstractBiome biome = BiomeRegistry.registry().getBiome(ResourceKey.of(currentTheme.biome()));
-//                    PacketHandler.of(plugin)
-//                        .clearBiomes()
-//                        .appendBiome(biome)
-//                        .register();
-//                }
+                if (biome != null) {
+                    biomePacketHandler
+                        .appendBiome(PhonyCustomBiome.builder()
+                            .setCustomBiome(ResourceKey.of(biome))
+                            .build())
+                        .register();
+                }
             }
 
             currentTheme = new Theme(Schematic.load(currentThemeName));
