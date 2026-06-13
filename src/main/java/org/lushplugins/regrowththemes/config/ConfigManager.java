@@ -73,7 +73,6 @@ public class ConfigManager {
 
         if (biome != null || (currentTheme != null && currentTheme.biome() != null)) {
             BiomeUpdater biomeUpdater = BiomeUpdater.of(RegrowthThemes.getInstance());
-            // TODO: work out why the biome isn't changing/removing properly
             for (Player player : Bukkit.getOnlinePlayers()) {
                 biomeUpdater.updateChunksForPlayer(player);
             }
