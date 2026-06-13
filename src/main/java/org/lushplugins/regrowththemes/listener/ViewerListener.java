@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.lushplugins.regrowththemes.RegrowthThemes;
+import org.lushplugins.regrowththemes.schematic.Schematic;
 import org.lushplugins.regrowththemes.theme.Theme;
 
 public class ViewerListener implements Listener {
@@ -14,10 +15,10 @@ public class ViewerListener implements Listener {
         Theme currentTheme = RegrowthThemes.getInstance().getConfigManager().getCurrentTheme();
         if (currentTheme != null) {
             Player player = event.getPlayer();
-            currentTheme.schematic().sendPackets(player, event.getChunk());
-//            Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
-//                currentTheme.schematic().sendPackets(player, event.getChunk());
-//            }, 20);
+            Schematic schematic = currentTheme.schematic();
+            if (schematic != null) {
+                schematic.sendPackets(player, event.getChunk());
+            }
         }
     }
 }

@@ -3,8 +3,11 @@ package org.lushplugins.regrowththemes.config;
 import me.outspending.biomesapi.keys.ResourceKey;
 import me.outspending.biomesapi.renderer.packet.PacketHandler;
 import me.outspending.biomesapi.renderer.packet.data.PhonyCustomBiome;
+import me.outspending.biomesapi.renderer.updater.BiomeUpdater;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 import org.lushplugins.regrowththemes.RegrowthThemes;
 import org.lushplugins.regrowththemes.schematic.Schematic;
@@ -13,6 +16,8 @@ import org.lushplugins.regrowththemes.theme.Theme;
 import java.io.File;
 
 public class ConfigManager {
+    private static final PacketHandler PACKET_HANDLER = PacketHandler.of(RegrowthThemes.getInstance());
+
     private Theme currentTheme;
 
     public ConfigManager() {
@@ -26,30 +31,9 @@ public class ConfigManager {
         plugin.reloadConfig();
         FileConfiguration config = plugin.getConfig();
 
-        PacketHandler biomePacketHandler = PacketHandler.of(plugin);
-        biomePacketHandler.clearBiomes();
-
         String currentThemeName = config.getString("current-theme", "none");
         if (!currentThemeName.equalsIgnoreCase("none")) {
-            File themeFile = RegrowthThemes.getInstance().getDataPath()
-                .resolve("themes")
-                .resolve(currentThemeName + ".yml")
-                .toFile();
-
-            if (themeFile.exists()) {
-                FileConfiguration themeConfig = YamlConfiguration.loadConfiguration(themeFile);
-                String biome = themeConfig.getString("biome");
-
-                if (biome != null) {
-                    biomePacketHandler
-                        .appendBiome(PhonyCustomBiome.builder()
-                            .setCustomBiome(ResourceKey.of(biome))
-                            .build())
-                        .register();
-                }
-            }
-
-            currentTheme = new Theme(currentThemeName, Schematic.load(currentThemeName));
+            setCurrentTheme(currentThemeName);
         } else {
             currentTheme = null;
         }
@@ -61,5 +45,40 @@ public class ConfigManager {
 
     public @Nullable Theme getCurrentTheme() {
         return currentTheme;
+    }
+
+    public void setCurrentTheme(String theme) {
+        PACKET_HANDLER.clearBiomes();
+
+        File themeFile = RegrowthThemes.getInstance().getDataPath()
+            .resolve("themes")
+            .resolve(theme + ".yml")
+            .toFile();
+
+        String biome;
+        if (themeFile.exists()) {
+            FileConfiguration themeConfig = YamlConfiguration.loadConfiguration(themeFile);
+            biome = themeConfig.getString("biome");
+
+            if (biome != null) {
+                PACKET_HANDLER
+                    .appendBiome(PhonyCustomBiome.builder()
+                        .setCustomBiome(ResourceKey.of(biome))
+                        .build())
+                    .register();
+            }
+        } else {
+            biome = null;
+        }
+
+        if (biome != null || (currentTheme != null && currentTheme.biome() != null)) {
+            BiomeUpdater biomeUpdater = BiomeUpdater.of(RegrowthThemes.getInstance());
+            // TODO: work out why the biome isn't changing/removing properly
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                biomeUpdater.updateChunksForPlayer(player);
+            }
+        }
+
+        currentTheme = new Theme(theme, Schematic.load(theme), biome);
     }
 }
