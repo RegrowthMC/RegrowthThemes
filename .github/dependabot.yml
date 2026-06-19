@@ -7,3 +7,5 @@ updates:
     ignore:
       - dependency-name: "io.papermc.paper:paper-api"
         update-types: [ "version-update:semver-patch" ]
+      - dependency-name: "me.outspending.biomesapi:BiomesAPI"
+        update-types: [ "version-update:semver-patch" ]
