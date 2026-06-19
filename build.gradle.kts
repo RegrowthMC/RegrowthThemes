@@ -30,7 +30,7 @@ dependencies {
 
     // Libraries
     implementation("org.lushplugins:LushLib:0.10.35")
-    implementation("me.outspending.biomesapi:BiomesAPI:2.3.0-06fa631")
+    implementation("me.outspending.biomesapi:BiomesAPI:2.3.1-0fe5943")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56")) // BOM: FastAsyncWorldEdit
 }
 
