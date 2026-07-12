@@ -1,13 +1,17 @@
 package org.lushplugins.regrowththemes.command.subcommands;
 
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 import org.lushplugins.lushlib.command.SubCommand;
 import org.lushplugins.lushlib.libraries.chatcolor.ChatColorHandler;
 import org.lushplugins.regrowththemes.RegrowthThemes;
 
 import java.io.IOException;
+import java.util.List;
 
 public class SetCommand extends SubCommand {
 
@@ -36,5 +40,10 @@ public class SetCommand extends SubCommand {
         }
 
         return true;
+    }
+
+    @Override
+    public @Nullable List<String> tabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NonNull @NotNull String[] args, @NonNull @NotNull String[] fullArgs) {
+        return args.length == 1 ? RegrowthThemes.getInstance().getConfigManager().getThemes() : null;
     }
 }

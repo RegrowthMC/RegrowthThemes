@@ -14,11 +14,14 @@ import org.lushplugins.regrowththemes.schematic.Schematic;
 import org.lushplugins.regrowththemes.theme.Theme;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 public class ConfigManager {
     private static final PacketHandler PACKET_HANDLER = PacketHandler.of(RegrowthThemes.getInstance());
 
     private Theme currentTheme;
+    private List<String> themes;
 
     public ConfigManager() {
         RegrowthThemes.getInstance().saveDefaultConfig();
@@ -37,6 +40,11 @@ public class ConfigManager {
         } else {
             currentTheme = null;
         }
+
+        themes = Arrays.stream(new File(RegrowthThemes.getInstance().getDataFolder(), "themes").listFiles())
+            .filter(file -> file.getName().endsWith(".yml"))
+            .map(file -> file.getName().replace(".yml", ""))
+            .toList();
     }
 
     public boolean isCurrentTheme(String themeName) {
@@ -79,5 +87,9 @@ public class ConfigManager {
         }
 
         currentTheme = new Theme(theme, Schematic.load(theme), biome);
+    }
+
+    public List<String> getThemes() {
+        return themes;
     }
 }
