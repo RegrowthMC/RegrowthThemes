@@ -1,9 +1,9 @@
 package org.lushplugins.regrowththemes.config;
 
-import me.outspending.biomesapi.keys.ResourceKey;
-import me.outspending.biomesapi.renderer.packet.PacketHandler;
-import me.outspending.biomesapi.renderer.packet.data.PhonyCustomBiome;
-import me.outspending.biomesapi.renderer.updater.BiomeUpdater;
+import dev.wyck.keys.ResourceKey;
+import dev.wyck.renderer.packet.PacketHandler;
+import dev.wyck.renderer.packet.data.VirtualBiome;
+import dev.wyck.renderer.updater.BiomeUpdater;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -62,8 +62,8 @@ public class ConfigManager {
 
             if (biome != null) {
                 PACKET_HANDLER
-                    .appendBiome(PhonyCustomBiome.builder()
-                        .setCustomBiome(ResourceKey.of(biome))
+                    .appendBiome(VirtualBiome.builder()
+                        .biome(ResourceKey.of(biome))
                         .build())
                     .register();
             }

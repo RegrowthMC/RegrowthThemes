@@ -14,7 +14,7 @@ repositories {
     maven("https://oss.sonatype.org/content/groups/public/")
     maven("https://repo.papermc.io/repository/maven-public/") // Paper, FastAsyncWorldEdit
     maven("https://repo.codemc.io/repository/maven-releases/") // PacketEvents
-    maven("https://repo.jsinco.dev/releases/") // BiomeAPI
+    maven("https://repo.wyck.dev/snapshots") // Wyck
     maven("https://repo.lushplugins.org/snapshots") // LushLib
     maven("https://maven.enginehub.org/repo/") // FastAsyncWorldEdit
 }
@@ -30,7 +30,7 @@ dependencies {
 
     // Libraries
     implementation("org.lushplugins:LushLib:0.10.35")
-    implementation("me.outspending.biomesapi:BiomesAPI:2.4.1")
+    implementation("dev.wyck:Wyck:3.0.0-3d4f9fd")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56")) // BOM: FastAsyncWorldEdit
 }
 
@@ -65,11 +65,11 @@ tasks {
     }
 
     runServer {
-        minecraftVersion("26.1.2")
+        minecraftVersion("26.2")
 
         downloadPlugins {
             modrinth("fastasyncworldedit", "2.15.2")
-            modrinth("packetevents", "2.12.2+spigot")
+            modrinth("packetevents", "2.13.0+spigot")
         }
     }
 }
