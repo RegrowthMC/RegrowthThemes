@@ -14,7 +14,7 @@ repositories {
     maven("https://oss.sonatype.org/content/groups/public/")
     maven("https://repo.papermc.io/repository/maven-public/") // Paper, FastAsyncWorldEdit
     maven("https://repo.codemc.io/repository/maven-releases/") // PacketEvents
-    maven("https://repo.wyck.dev/snapshots") // Wyck
+    maven("https://repo.wyck.dev/releases") // Wyck
     maven("https://repo.lushplugins.org/snapshots") // LushLib
     maven("https://maven.enginehub.org/repo/") // FastAsyncWorldEdit
 }
@@ -30,7 +30,7 @@ dependencies {
 
     // Libraries
     implementation("org.lushplugins:LushLib:0.10.35")
-    implementation("dev.wyck:Wyck:3.0.0-3d4f9fd")
+    implementation("dev.wyck:Wyck:3.0.0")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56")) // BOM: FastAsyncWorldEdit
 }
 
