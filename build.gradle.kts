@@ -30,7 +30,7 @@ dependencies {
 
     // Libraries
     implementation("org.lushplugins:LushLib:0.10.35")
-    implementation("dev.wyck:Wyck:3.1.1")
+    implementation("dev.wyck:Wyck:3.2.0")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56")) // BOM: FastAsyncWorldEdit
 }
 
