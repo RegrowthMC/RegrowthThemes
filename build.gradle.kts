@@ -29,7 +29,7 @@ dependencies {
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.15.3") { isTransitive = false }
 
     // Libraries
-    implementation("org.lushplugins:LushLib:0.10.35")
+    implementation("org.lushplugins:LushLib:1.0.1")
     implementation("dev.wyck:Wyck:3.3.0")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56")) // BOM: FastAsyncWorldEdit
 }
