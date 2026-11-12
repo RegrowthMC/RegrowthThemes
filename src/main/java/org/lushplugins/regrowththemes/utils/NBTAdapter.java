@@ -98,7 +98,7 @@ public class NBTAdapter {
         LIN_TO_NBT_MAP.put(linClass, new ConversionFunction<>(linClass, function));
     }
 
-    @SuppressWarnings({"unchecked", "NullableProblems"})
+    @SuppressWarnings({"unchecked"})
     private static <T extends LinTag<?>> LinListTag<T> convertList(NBTList<?> nbt) {
         LinListTag.Builder<T> tagBuilder = (LinListTag.Builder<T>) LinListTag.builder(NBTTypeAdapter.adapt(nbt.getType()));
 

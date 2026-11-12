@@ -1,59 +1,42 @@
 package org.lushplugins.regrowththemes.listener;
 
 import org.bukkit.block.BlockState;
-import org.bukkit.block.Skull;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.jetbrains.annotations.Nullable;
 import org.lushplugins.regrowththemes.RegrowthThemes;
 import org.lushplugins.regrowththemes.schematic.Schematic;
-import org.lushplugins.regrowththemes.schematic.SchematicManager;
-import org.lushplugins.regrowththemes.schematic.SchematicUser;
+
+import java.util.UUID;
 
 public class EditorListener implements Listener {
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onBlockPlace(BlockPlaceEvent event) {
-        Player player = event.getPlayer();
-        Schematic schematic = getCurrentSchematic(player);
-        if (schematic == null) {
-            return;
+        UUID uuid = event.getPlayer().getUniqueId();
+        Schematic schematic = RegrowthThemes.getInstance().getSchematicManager().getViewing(uuid);
+        if (schematic != null && schematic.isEditor(uuid)) {
+            event.setCancelled(true);
+            BlockState blockState = event.getBlock().getState();
+            schematic.setBlock(blockState);
         }
-
-        event.setCancelled(true);
-        BlockState blockState = event.getBlock().getState();
-        schematic.placeBlock(blockState);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onBlockBreak(BlockBreakEvent event) {
-        Player player = event.getPlayer();
-        Schematic schematic = getCurrentSchematic(player);
-        if (schematic == null) {
-            return;
+        UUID uuid = event.getPlayer().getUniqueId();
+        Schematic schematic = RegrowthThemes.getInstance().getSchematicManager().getViewing(uuid);
+        if (schematic != null && schematic.isEditor(uuid)) {
+            event.setCancelled(true);
+            schematic.removeBlock(event.getBlock().getLocation());
         }
-
-        event.setCancelled(true);
-        schematic.breakBlock(event.getBlock().getLocation());
     }
 
     @EventHandler
     public void onPlayerLeave(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        RegrowthThemes.getInstance().getSchematicManager().removeUser(player.getUniqueId());
-    }
-
-    private @Nullable Schematic getCurrentSchematic(Player player) {
-        SchematicManager schematicManager = RegrowthThemes.getInstance().getSchematicManager();
-        SchematicUser user = schematicManager.getUser(player.getUniqueId());
-        if (user == null) {
-            return null;
-        }
-
-        return user.getCurrentSchematic();
+        RegrowthThemes.getInstance().getSchematicManager().invalidateUser(event.getPlayer().getUniqueId());
     }
 }

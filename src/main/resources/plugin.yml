@@ -1,7 +1,7 @@
 name: RegrowthThemes
-version: ${project.version}
+version: ${version}+${commit}
 main: org.lushplugins.regrowththemes.RegrowthThemes
-api-version: '1.17'
+api-version: '26.3'
 commands:
   theme:
     usage: /theme

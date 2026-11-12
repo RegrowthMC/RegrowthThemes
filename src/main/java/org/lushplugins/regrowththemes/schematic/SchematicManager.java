@@ -1,79 +1,104 @@
 package org.lushplugins.regrowththemes.schematic;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
+import org.lushplugins.regrowththemes.RegrowthThemes;
+import org.lushplugins.regrowththemes.theme.Theme;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class SchematicManager {
-    private final HashMap<String, Schematic> schematics = new HashMap<>();
-    private final HashMap<UUID, SchematicUser> users = new HashMap<>();
+    private final Map<String, CompletableFuture<Schematic>> schematics = new HashMap<>();
+    private final Map<UUID, String> users = new HashMap<>();
 
     public @Nullable Schematic getSchematic(String schematicName) {
-        return schematics.get(schematicName);
+        CompletableFuture<Schematic> future = schematics.get(schematicName);
+        return future != null && future.isDone() ? future.join() : null;
     }
 
-    public @Nullable Schematic getOrLoadSchematic(String schematicName) {
-        return schematics.computeIfAbsent(schematicName, (ignored) -> Schematic.load(schematicName));
+    public CompletableFuture<Schematic> getOrLoadSchematic(String schematicName) {
+        return schematics.computeIfAbsent(schematicName, Schematic::load);
     }
 
-    public Collection<Schematic> getSchematics() {
-        return schematics.values();
+    public Collection<Schematic> getCachedSchematics() {
+        return schematics.values().stream()
+            .filter(CompletableFuture::isDone)
+            .map(CompletableFuture::join)
+            .toList();
     }
 
-    public void addSchematic(Schematic schematic) {
-        schematics.put(schematic.getName(), schematic);
-    }
-
-    public void removeSchematic(Schematic schematic) {
-        removeSchematic(schematic.getName());
+    public void addSchematic(String schematicName, Schematic schematic) {
+        schematics.put(schematicName, CompletableFuture.completedFuture(schematic));
     }
 
     public void removeSchematic(String schematicName) {
         schematics.remove(schematicName);
     }
 
-    public SchematicUser getUser(UUID uuid) {
-        return users.get(uuid);
+    public @Nullable Schematic getViewing(UUID uuid) {
+        String schematicName = users.get(uuid);
+        if (schematicName != null) {
+            return getSchematic(schematicName);
+        }
+
+        Theme theme = RegrowthThemes.getInstance().getConfigManager().getCurrentTheme();
+        return theme != null ? getSchematic(theme.name()) : null;
     }
 
-    public void updateUser(UUID uuid, String schematicName) {
-        SchematicUser user = getUser(uuid);
-        if (user != null) {
-            Schematic schematic = user.getCurrentSchematic();
-            if (schematic != null) {
-                schematic.removeUser(uuid);
+    public Set<UUID> getViewing(String schematicName) {
+        // This is hacky but works until a better viewing system is implemented
+        if (RegrowthThemes.getInstance().getConfigManager().isCurrentTheme(schematicName)) {
+            Set<UUID> viewers = Bukkit.getOnlinePlayers().stream()
+                .map(Player::getUniqueId)
+                .collect(Collectors.toCollection(HashSet::new));
 
-                if (!schematic.hasUsers()) {
-                    removeSchematic(schematic);
+            viewers.removeAll(users.entrySet().stream()
+                .filter(entry -> !entry.getValue().equalsIgnoreCase(schematicName))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet()));
+
+            return viewers;
+        }
+
+        return users.entrySet().stream()
+            .filter(entry -> entry.getValue().equalsIgnoreCase(schematicName))
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+    }
+
+    public void setViewing(UUID uuid, String schematicName) {
+        String currentSchematicName = users.get(uuid);
+        if (getSchematic(currentSchematicName) instanceof Schematic modifying) {
+            modifying.removeEditor(uuid);
+
+            if (!RegrowthThemes.getInstance().getConfigManager().isCurrentTheme(currentSchematicName)) {
+                if (!modifying.hasEditors()) {
+                    removeSchematic(currentSchematicName);
                 }
             }
-
-
-            user.setCurrentSchematic(schematicName);
-        } else {
-            users.put(uuid, new SchematicUser(schematicName));
         }
 
-        Schematic newSchematic = getSchematic(schematicName);
-        if (newSchematic != null) {
-            newSchematic.addUser(uuid);
+        users.put(uuid, schematicName);
+    }
+
+    public void setEditing(UUID uuid, String schematicName) {
+        setViewing(uuid, schematicName);
+
+        Schematic schematic = getViewing(uuid);
+        if (schematic != null) {
+            schematic.addEditor(uuid);
         }
     }
 
-    public void removeUser(UUID uuid) {
-        SchematicUser user = users.remove(uuid);
-        if (user == null) {
-            return;
-        }
+    public void invalidateUser(UUID uuid) {
+        String schemName = users.remove(uuid);
 
-        String schematicName = user.getCurrentSchematicName();
-        Schematic schematic = getSchematic(schematicName);
-        if (schematic == null) {
-            return;
+        Schematic schematic = getSchematic(schemName);
+        if (schematic != null) {
+            schematic.removeEditor(uuid);
         }
-
-        schematic.removeUser(uuid);
     }
 }

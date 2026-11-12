@@ -10,6 +10,7 @@ import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockEntityData;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
@@ -20,6 +21,7 @@ import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.concurrency.LazyReference;
 import com.sk89q.worldedit.world.block.BaseBlock;
 import com.sk89q.worldedit.world.block.BlockState;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.*;
 import org.bukkit.block.Skull;
 import org.bukkit.block.data.BlockData;
@@ -34,29 +36,35 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.NoSuchFileException;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 public class Schematic {
     private static final BlockData BUKKIT_AIR = Material.AIR.createBlockData();
     private static final BlockState AIR = BlockState.get("minecraft:air");
 
-    // TODO: Move file, clipboard and potentially users to separate modifiable schematic
-    private final File file;
     private final Clipboard clipboard;
-    private final List<UUID> users = new ArrayList<>();
-    private final HashMultimap<Vector2i, Long> locationMap = HashMultimap.create();
-    private final HashMap<Long, SchematicBlock> blockMap = new HashMap<>();
+    private final File file;
+    private Multimap<Vector2i, Long> locationMap = HashMultimap.create();
+    private Map<Long, SchematicBlock> blockMap = new HashMap<>();
+    private final Set<UUID> editors = new HashSet<>();
+    // TODO: Fully implement
+    private Callable<Collection<Player>> viewerEngine = Collections::emptySet;
 
-    protected Schematic(File file, Clipboard clipboard) {
-        this.file = file;
+    protected Schematic(Clipboard clipboard, File file) {
         this.clipboard = clipboard;
+        this.file = file;
+    }
 
-        Bukkit.getScheduler().runTaskAsynchronously(RegrowthThemes.getInstance(), () -> {
+    public CompletableFuture<Void> readClipboard() {
+        return CompletableFuture.runAsync(() -> {
+            Multimap<Vector2i, Long> locationMap = HashMultimap.create();
+            Map<Long, SchematicBlock> blockMap = new HashMap<>();
+
             for (BlockVector3 position : clipboard) {
                 BaseBlock blockData = clipboard.getFullBlock(position);
-
                 if (blockData.getMaterial().isAir()) {
                     continue;
                 }
@@ -83,21 +91,31 @@ public class Schematic {
                 locationMap.put(chunkLocation, serializedPosition);
                 blockMap.put(serializedPosition, schemBlock);
             }
-        });
-    }
 
-    public String getName() {
-        return file.getName();
+            List<Long> removedLocations = new ArrayList<>(this.locationMap.values());
+            removedLocations.removeAll(locationMap.values());
+
+            this.locationMap = locationMap;
+            this.blockMap = blockMap;
+
+            for (Player viewer : viewers()) {
+                sendPackets(viewer);
+
+                for (Long removedLocation : removedLocations) {
+                    Vector3i position = new Vector3i(removedLocation);
+                    World world = viewer.getWorld();
+                    Location location = new Location(world, position.getX(), position.getY(), position.getZ());
+                    viewer.sendBlockChange(location, world.getBlockData(location));
+                }
+            }
+        });
     }
 
     public boolean containsPosition(long position) {
         return locationMap.containsValue(position);
     }
 
-    public void placeBlock(org.bukkit.block.BlockState state) {
-        BlockData blockData = state.getBlockData();
-        BlockState blockState = BukkitAdapter.adapt(blockData);
-
+    public void setBlock(Location location, BlockState state) {
         LazyReference<LinCompoundTag> nbtData = null;
         if (state instanceof Skull skull) {
             PlayerProfile playerProfile = skull.getPlayerProfile();
@@ -127,54 +145,51 @@ public class Schematic {
             }
         }
 
-        BaseBlock builtState = blockState.toBaseBlock(nbtData);
-        clipboard.setBlock(
-            state.getX(),
-            state.getY(),
-            state.getZ(),
-            builtState);
+        BaseBlock builtState = state.toBaseBlock(nbtData);
+        clipboard.setBlock(location.getBlockX(), location.getBlockY(), location.getBlockZ(), builtState);
 
 //        Chunk chunk = state.getChunk();
 //        Vector2i chunkLocation = new Vector2i(chunk.getX(), chunk.getZ());
 //        chunkMap.put(chunkLocation, state);
 //        locationMap.put(chunkLocation, new Vector3i(state.getX(), state.getY(), state.getZ()).getSerializedPosition());
+    }
+
+    public void setBlock(org.bukkit.block.BlockState state) {
+        BlockData blockData = state.getBlockData();
+        BlockState blockState = BukkitAdapter.adapt(blockData);
 
         Location location = state.getLocation();
+        setBlock(location, blockState);
+
         Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
-            users.stream()
+            editors.stream()
                 .map(Bukkit::getPlayer)
                 .filter(Objects::nonNull)
                 .forEach(player -> player.sendBlockChange(location, blockData));
         }, 5);
     }
 
-    public void breakBlock(Location location) {
+    public void removeBlock(Location location) {
         BlockVector3 wePosition = BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ());
         Region region = clipboard.getRegion();
-        if (!region.contains(wePosition)) {
-            return;
+        if (region.contains(wePosition)) {
+            clipboard.setBlock(location.getBlockX(), location.getBlockY(), location.getBlockZ(), AIR);
+
+            Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
+                editors.stream()
+                    .map(Bukkit::getPlayer)
+                    .filter(Objects::nonNull)
+                    .forEach(player -> player.sendBlockChange(location, BUKKIT_AIR));
+            }, 5);
         }
+    }
 
-        clipboard.setBlock(
-            location.getBlockX(),
-            location.getBlockY(),
-            location.getBlockZ(),
-            AIR);
-
-        Chunk chunk = location.getChunk();
-        Vector2i chunkCoord = new Vector2i(chunk.getX(), chunk.getZ());
-
-
-        long serializedPosition = new Vector3i(location.getBlockX(), location.getBlockY(), location.getBlockZ()).getSerializedPosition();
-        locationMap.get(chunkCoord).remove(serializedPosition);
-        blockMap.remove(serializedPosition);
-
-        Bukkit.getScheduler().runTaskLaterAsynchronously(RegrowthThemes.getInstance(), () -> {
-            users.stream()
-                .map(Bukkit::getPlayer)
-                .filter(Objects::nonNull)
-                .forEach(player -> player.sendBlockChange(location, BUKKIT_AIR));
-        }, 5);
+    public void save(File file) {
+        try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_V3_SCHEMATIC.getWriter(new FileOutputStream(file))) {
+            writer.write(clipboard);
+        } catch (IOException e) {
+            RegrowthThemes.getInstance().getLogger().log(Level.WARNING, "Failed to save schematic '" + file.getName() + "': ", e);
+        }
     }
 
     public void sendPackets(Player player, Chunk chunk) {
@@ -213,33 +228,56 @@ public class Schematic {
         });
     }
 
-    public void save() {
-        try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_V3_SCHEMATIC.getWriter(new FileOutputStream(file))) {
-            writer.write(clipboard);
-        } catch (IOException e) {
-            RegrowthThemes.getInstance().getLogger().log(Level.WARNING, "Failed to save schematic '" + file.getName() + "': ", e);
+    public void sendPackets(Player player) {
+        Bukkit.getScheduler().runTask(RegrowthThemes.getInstance(), () -> {
+            for (Chunk sentChunk : player.getSentChunks()) {
+                sendPackets(player, sentChunk);
+            }
+        });
+    }
+
+    public boolean hasEditors() {
+        return !editors.isEmpty();
+    }
+
+    public boolean isEditor(UUID uuid) {
+        return editors.contains(uuid);
+    }
+
+    public Set<UUID> getEditors() {
+        return editors;
+    }
+
+    public void addEditor(UUID uuid) {
+        editors.add(uuid);
+    }
+
+    public void removeEditor(UUID uuid) {
+        if (editors.remove(uuid) && editors.isEmpty()) {
+            readClipboard();
+            save(file);
         }
     }
 
-    public List<UUID> getUsers() {
-        return users;
-    }
-
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    public boolean hasUsers() {
-        return !users.isEmpty();
-    }
-
-    public void addUser(UUID uuid) {
-        users.add(uuid);
-    }
-
-    public void removeUser(UUID uuid) {
-        users.remove(uuid);
-
-        if (!hasUsers()) {
-            save();
+    public Collection<Player> viewers() {
+        try {
+            return viewerEngine.call();
+        } catch (Exception e) {
+            RegrowthThemes.getInstance().getLogger().log(Level.SEVERE, e.getMessage(), e);
+            return Collections.emptyList();
         }
+    }
+
+    public void setViewerEngine(Callable<Collection<Player>> viewerEngine) {
+        this.viewerEngine = viewerEngine;
+
+        for (Player viewer : viewers()) {
+            sendPackets(viewer);
+        }
+    }
+
+    public void clearViewerEngine() {
+        this.viewerEngine = Collections::emptySet;
     }
 
     public static Schematic create(String path, Location location) {
@@ -247,38 +285,41 @@ public class Schematic {
             path += ".schem";
         }
 
-        File file = FileUtils.getSafeFile(new File(RegrowthThemes.getInstance().getDataFolder(), "schematics"), path);
+        File file = FileUtils.getSafeFile(RegrowthThemes.getInstance().getDataPath().resolve("schematics"), path);
         CuboidRegion region = new CuboidRegion(
             BlockVector3.at(location.getBlockX() - 150, location.getWorld().getMaxHeight(), location.getBlockZ() - 150),
             BlockVector3.at(location.getBlockX() + 150, location.getWorld().getMinHeight(), location.getBlockZ() + 150));
         BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
         clipboard.setOrigin(BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
 
-        return new Schematic(file, clipboard);
+        return new Schematic(clipboard, file);
     }
 
-    public static Schematic load(String path) {
-        if (!path.endsWith(".schem")) {
-            path += ".schem";
-        }
-
-        return load(FileUtils.getSafeFile(new File(RegrowthThemes.getInstance().getDataFolder(), "schematics"), path));
-    }
-
-    public static Schematic load(File file) {
+    public static CompletableFuture<Schematic> load(File file) {
         if (!file.exists()) {
-            return null;
+            return CompletableFuture.completedFuture(null);
         }
 
         ClipboardFormat format = ClipboardFormats.findByFile(file);
         if (format == null) {
-            return null;
+            return CompletableFuture.completedFuture(null);
         }
 
         try (ClipboardReader reader = format.getReader(new FileInputStream(file))) {
-            return new Schematic(file, reader.read());
+            Schematic schematic = new Schematic(reader.read(), file);
+            String schematicName = file.getName().replace(".schem", "");
+            schematic.setViewerEngine(() -> RegrowthThemes.getInstance().getSchematicManager().getViewing(schematicName).stream()
+                .map(Bukkit::getPlayer)
+                .filter(Objects::nonNull)
+                .toList());
+            return schematic.readClipboard().thenApply((_) -> schematic);
         } catch (IOException e) {
-            return null;
+            return CompletableFuture.completedFuture(null);
         }
+    }
+
+    public static CompletableFuture<Schematic> load(String path) {
+        path = StringUtils.appendIfMissing(path, ".schem");
+        return load(FileUtils.getSafeFile(RegrowthThemes.getInstance().getSchematicsPath(), path));
     }
 }
